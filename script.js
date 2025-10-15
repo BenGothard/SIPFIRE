@@ -3,6 +3,8 @@ const scoreEl = document.getElementById('score');
 const checkboxes = scoreboardForm?.querySelectorAll('input[type="checkbox"]');
 const shareButton = document.getElementById('share-btn');
 const shareOutput = document.getElementById('share-output');
+const shareLinks = document.querySelectorAll('[data-share-target]');
+const clipboardLink = document.querySelector('[data-share-target="clipboard"]');
 const yearEl = document.getElementById('year');
 const simulateTokenBtn = document.getElementById('simulate-token');
 const tokenProgressEl = document.getElementById('token-progress');
@@ -74,6 +76,9 @@ if (checkboxes?.length) {
 
     if (shareOutput) {
       shareOutput.textContent = `Logged ${selected.length}/7 disciplines on ${timestamp}. Keep compounding!`;
+      const payload = buildSharePayload(selected);
+      lastSharePayload = payload;
+      updateShareLinks(payload);
     }
   });
 
@@ -84,22 +89,122 @@ if (checkboxes?.length) {
         .map((item) => item.value);
       persistScoreboard(selected);
       updateScoreboardDisplay(selected);
+      if (shareOutput) {
+        const payload = buildSharePayload(selected);
+        lastSharePayload = payload;
+        updateShareLinks(payload);
+      }
     });
   });
 }
 
-if (shareButton && shareOutput) {
-  shareButton.addEventListener('click', () => {
-    const savedValues = loadScoreboard();
-    const missing = 7 - savedValues.length;
-    const message = missing > 0
-      ? `SIPFIRE Check-in: ${savedValues.join(', ')} 🔥 | ${missing} to ignite before day ends. Join me?`
-      : 'SIPFIRE Check-in: 7/7 🔥🔥🔥 Fully ignited today! Keep the flame alive.';
+let lastSharePayload = null;
 
-    shareOutput.textContent = message;
-    navigator.clipboard?.writeText(message).catch(() => {
-      console.warn('Clipboard copy not available in this browser.');
-    });
+function buildSharePayload(values = loadScoreboard()) {
+  const selected = values ?? [];
+  const missing = Math.max(0, 7 - selected.length);
+  const headline = missing > 0
+    ? `SIPFIRE Check-in: ${selected.join(', ')} 🔥 | ${missing} more to ignite before day ends.`
+    : 'SIPFIRE Check-in: 7/7 🔥🔥🔥 Fully ignited today! Keep the flame alive.';
+
+  return {
+    message: headline,
+    url: window.location.href,
+    missing,
+  };
+}
+
+function updateShareLinks(payload) {
+  shareLinks.forEach((link) => {
+    const target = link.getAttribute('data-share-target');
+    if (!target || target === 'clipboard') {
+      return;
+    }
+
+    const encodedMessage = encodeURIComponent(`${payload.message} ${payload.url}`.trim());
+    let href = '#';
+
+    switch (target) {
+      case 'twitter':
+        href = `https://twitter.com/intent/tweet?text=${encodedMessage}`;
+        break;
+      case 'telegram':
+        href = `https://t.me/share/url?url=${encodeURIComponent(payload.url)}&text=${encodeURIComponent(payload.message)}`;
+        break;
+      case 'whatsapp':
+        href = `https://wa.me/?text=${encodedMessage}`;
+        break;
+      default:
+        href = payload.url;
+    }
+
+    link.setAttribute('href', href);
+  });
+}
+
+async function copyShareText(text) {
+  if (!navigator.clipboard) {
+    return false;
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (error) {
+    console.warn('Clipboard copy not available in this browser.', error);
+    return false;
+  }
+}
+
+const initialPayload = buildSharePayload(loadScoreboard());
+lastSharePayload = initialPayload;
+updateShareLinks(initialPayload);
+
+if (shareOutput && !shareOutput.textContent) {
+  shareOutput.textContent = 'Ready to broadcast your progress? Hit share to ignite your circle.';
+}
+
+if (shareButton && shareOutput) {
+  shareButton.addEventListener('click', async () => {
+    const savedValues = loadScoreboard();
+    const payload = buildSharePayload(savedValues);
+    lastSharePayload = payload;
+    updateShareLinks(payload);
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'SIPFIRE Daily Check-in',
+          text: payload.message,
+          url: payload.url,
+        });
+        shareOutput.textContent = 'Share sheet opened. Keep fueling the movement! If it did not send, use the links below.';
+        return;
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.warn('Native share failed, falling back to manual options.', error);
+        }
+      }
+    }
+
+    shareOutput.textContent = `${payload.message} Use the links below to signal your streak.`;
+
+    if (!navigator.share) {
+      await copyShareText(`${payload.message} ${payload.url}`.trim());
+    }
+  });
+}
+
+if (clipboardLink) {
+  clipboardLink.addEventListener('click', async (event) => {
+    event.preventDefault();
+    const payload = lastSharePayload ?? buildSharePayload(loadScoreboard());
+    const copied = await copyShareText(`${payload.message} ${payload.url}`.trim());
+    if (shareOutput) {
+      shareOutput.textContent = copied
+        ? 'Copied to clipboard! Paste it anywhere to spread the flame.'
+        : 'Clipboard unavailable. Use the share links above to spread the flame.';
+    }
   });
 }
 
