@@ -475,6 +475,11 @@ blockquote::before {
   align-items: center;
 }
 
+.token-copy {
+  display: grid;
+  gap: 1.5rem;
+}
+
 .token-card {
   background: rgba(12, 12, 24, 0.85);
   border-radius: var(--radius-lg);
