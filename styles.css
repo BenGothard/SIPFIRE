@@ -480,6 +480,10 @@ blockquote::before {
   gap: 1.5rem;
 }
 
+.token-copy .btn {
+  margin-top: 1.25rem;
+}
+
 .token-card {
   background: rgba(12, 12, 24, 0.85);
   border-radius: var(--radius-lg);
