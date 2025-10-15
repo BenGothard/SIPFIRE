@@ -365,6 +365,10 @@ button:hover {
   gap: 1.5rem;
 }
 
+.progress-card .btn {
+  margin-top: 1.25rem;
+}
+
 #scoreboard.celebrate {
   animation: glow 0.9s ease;
 }
