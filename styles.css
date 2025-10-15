@@ -522,7 +522,9 @@ blockquote::before {
 .cta-grid {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  justify-content: center;
+  grid-template-columns: minmax(280px, 420px);
+  margin: 0 auto;
 }
 
 .cta-card {
@@ -532,6 +534,8 @@ blockquote::before {
   border: 1px solid rgba(255, 255, 255, 0.06);
   display: grid;
   gap: 1rem;
+  text-align: center;
+  justify-items: center;
 }
 
 .cta-card h3 {
@@ -545,6 +549,7 @@ blockquote::before {
   background: rgba(255, 255, 255, 0.05);
   color: var(--accent);
   font-weight: 600;
+  width: 100%;
 }
 
 .footer {
